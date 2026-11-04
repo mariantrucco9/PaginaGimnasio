@@ -1,0 +1,66 @@
+services:
+  mysql:
+    image: mysql:8.4
+    environment:
+      MYSQL_ROOT_PASSWORD: ${MYSQL_ROOT_PASSWORD:-devroot}
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-workout_tracker}
+      MYSQL_USER: ${MYSQL_USER:-workout}
+      MYSQL_PASSWORD: ${MYSQL_PASSWORD:-workout_dev}
+    ports:
+      - "${MYSQL_PORT:-3306}:3306"
+    volumes:
+      - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "127.0.0.1", "-uroot", "-p$${MYSQL_ROOT_PASSWORD}"]
+      interval: 5s
+      timeout: 5s
+      retries: 20
+
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: air -c .air.toml
+    environment:
+      PORT: "8080"
+      DB_HOST: mysql
+      DB_PORT: "3306"
+      DB_USER: ${MYSQL_USER:-workout}
+      DB_PASSWORD: ${MYSQL_PASSWORD:-workout_dev}
+      DB_NAME: ${MYSQL_DATABASE:-workout_tracker}
+      PIN_HMAC_SECRET: ${PIN_HMAC_SECRET:-local-only-change-this-pin-secret}
+      JWT_SECRET: ${JWT_SECRET:-local-only-change-this-jwt-secret}
+      JWT_TTL_HOURS: "24"
+      FRONTEND_ORIGIN: http://localhost:5173
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./backend:/app
+      - go_modules:/go/pkg/mod
+      - go_build_cache:/root/.cache/go-build
+    depends_on:
+      mysql:
+        condition: service_healthy
+
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    working_dir: /app
+    command: sh -c "npm ci && npm run dev -- --host 0.0.0.0"
+    environment:
+      VITE_API_URL: http://localhost:8080
+    ports:
+      - "5173:5173"
+    volumes:
+      - ./frontend:/app
+      - frontend_node_modules:/app/node_modules
+    depends_on:
+      - backend
+
+volumes:
+  mysql_data:
+  go_modules:
+  go_build_cache:
+  frontend_node_modules:

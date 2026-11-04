@@ -1,0 +1,6 @@
+.env
+backend/tmp/
+backend/vendor/
+frontend/node_modules/
+frontend/dist/
+/NOTAS-PROYECTO.md
