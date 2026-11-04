@@ -1,4 +1,4 @@
-# Workout Tracker
+# PaginaGimnasio — Workout Tracker
 
 Aplicación monolítica para desarrollo local: React/Vite, API REST en Go y MySQL 8.
 
