@@ -347,8 +347,8 @@ func ListPastWorkouts(db *gorm.DB) gin.HandlerFunc {
 		}
 		workouts := make([]workoutSummary, 0)
 		err = db.Table("workout_logs").
-			Select("workout_logs.id, DATE_FORMAT(workout_logs.date, '%Y-%m-%d') AS date, workout_logs.completed_at").
-			Where(`workout_logs.user_id = ? AND workout_logs.routine_id = ? AND workout_logs.date < CURDATE()
+			Select("workout_logs.id, TO_CHAR(workout_logs.date, 'YYYY-MM-DD') AS date, workout_logs.completed_at").
+			Where(`workout_logs.user_id = ? AND workout_logs.routine_id = ? AND workout_logs.date < CURRENT_DATE
 				AND (workout_logs.completed_at IS NOT NULL OR EXISTS (
 					SELECT 1
 					FROM exercise_logs
@@ -450,7 +450,7 @@ func Calendar(db *gorm.DB) gin.HandlerFunc {
 
 		var activityDates []string
 		err := db.Table("workout_logs").
-			Select("DATE_FORMAT(workout_logs.date, '%Y-%m-%d')").
+			Select("TO_CHAR(workout_logs.date, 'YYYY-MM-DD')").
 			Where(`workout_logs.user_id = ? AND (
 				workout_logs.completed_at IS NOT NULL OR EXISTS (
 					SELECT 1
@@ -461,7 +461,7 @@ func Calendar(db *gorm.DB) gin.HandlerFunc {
 			)`, userID).
 			Group("workout_logs.date").
 			Order("workout_logs.date ASC").
-			Pluck("DATE_FORMAT(workout_logs.date, '%Y-%m-%d')", &activityDates).Error
+			Pluck("TO_CHAR(workout_logs.date, 'YYYY-MM-DD')", &activityDates).Error
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "could not load calendar activity"})
 			return

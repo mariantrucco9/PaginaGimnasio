@@ -1,6 +1,6 @@
 # PaginaGimnasio — Workout Tracker
 
-Aplicación monolítica para desarrollo local: React/Vite, API REST en Go y MySQL 8.
+Aplicación monolítica: React/Vite, API REST en Go y PostgreSQL. Para despliegue, el frontend puede publicarse en Vercel, la API en Render y la base de datos en Supabase.
 
 ## Iniciar el entorno
 
@@ -12,16 +12,25 @@ docker compose up --build
 
 - Frontend: http://localhost:5173
 - API: http://localhost:8080
-- MySQL: `localhost:3306`
+- PostgreSQL: `localhost:5432`
 
-El backend aplica las migraciones GORM al iniciar. Air observa los archivos Go y reinicia la API ante cambios; Vite hace lo mismo para el frontend. Los datos de MySQL persisten en el volumen `mysql_data`.
-Si el puerto local `3306` ya está ocupado, cambia `MYSQL_PORT` en `.env` (por ejemplo, a `3307`).
+El backend aplica las migraciones GORM al iniciar. Air observa los archivos Go y reinicia la API ante cambios; Vite hace lo mismo para el frontend. Los datos locales de PostgreSQL persisten en el volumen `postgres_data`.
+Si el puerto local `5432` ya está ocupado, cambia `POSTGRES_PORT` en `.env`.
+Para `POSTGRES_PASSWORD` local, usa caracteres seguros para URL (letras, números, guion o guion bajo), ya que Compose construye con ese valor el `DB_URL` del backend.
 
 Los valores por defecto del Compose son solo para desarrollo local. No expongas esos puertos ni uses las claves de ejemplo en un entorno accesible desde Internet.
 
+## Variables de entorno para despliegue
+
+- **Render (backend):** usa `backend` como directorio raíz, `go build -o bin/api ./cmd/api` como comando de build y `./bin/api` como comando de inicio. Configura `DB_URL` con la cadena PostgreSQL de Supabase, `JWT_SECRET` y `PIN_HMAC_SECRET` con secretos aleatorios de al menos 32 bytes, y `CORS_ALLOWED_ORIGINS` con el dominio exacto de Vercel (sin barra final). Render proporciona `PORT` automáticamente.
+- **Vercel (frontend):** usa `frontend` como directorio raíz, `npm run build` como comando de build y `dist` como directorio de salida. Configura `VITE_API_URL` con la URL pública del backend de Render, sin una ruta adicional; el frontend agrega `/api/...`.
+- **Supabase (base de datos):** copia la cadena de conexión PostgreSQL del proyecto a `DB_URL`. Usa el modo SSL requerido por esa cadena (`sslmode=require` para las conexiones que lo requieran). Si la contraseña contiene caracteres reservados de URL, usa la versión codificada que entrega Supabase.
+
+La migración del código no copia registros desde la antigua base MySQL. La API creará el esquema PostgreSQL al arrancar, pero para conservar usuarios, rutinas y sesiones hay que exportar/importar los datos a PostgreSQL y revisar las secuencias de IDs antes de habilitar el servicio. El volumen local `mysql_data` tampoco se elimina ni se convierte automáticamente.
+
 ## Poblar la rutina Powerbuilding
 
-El seed usa `UserID = 1`, abre la base con la configuración normal del backend y aplica las migraciones antes de cargar los datos. Inicia MySQL con Compose y ejecuta:
+El seed usa `UserID = 1`, abre la base con la configuración normal del backend y aplica las migraciones antes de cargar los datos. Inicia PostgreSQL con Compose y ejecuta:
 
 ```sh
 docker compose run --build --rm backend go run ./cmd/seed
@@ -46,7 +55,7 @@ set +a
 python3 -c 'import getpass,hmac,hashlib,os; pin=getpass.getpass("PIN de 6 dígitos: "); print(hmac.new(os.environ["PIN_HMAC_SECRET"].encode(),pin.encode(),hashlib.sha256).hexdigest())'
 ```
 
-Inserta el digest resultante en MySQL, opcionalmente junto con el nombre:
+Inserta el digest resultante en PostgreSQL, opcionalmente junto con el nombre:
 
 ```sql
 INSERT INTO users (pin_digest, name, created_at, updated_at)

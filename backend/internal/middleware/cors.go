@@ -1,14 +1,30 @@
 package middleware
 
-import "github.com/gin-gonic/gin"
+import (
+	"os"
+	"strings"
 
-func CORS(origin string) gin.HandlerFunc {
+	"github.com/gin-gonic/gin"
+)
+
+func CORS() gin.HandlerFunc {
+	allowedOrigins := make(map[string]struct{})
+	for _, origin := range strings.Split(os.Getenv("CORS_ALLOWED_ORIGINS"), ",") {
+		if origin = strings.TrimSpace(origin); origin != "" {
+			allowedOrigins[origin] = struct{}{}
+		}
+	}
+	if len(allowedOrigins) == 0 {
+		allowedOrigins["http://localhost:5173"] = struct{}{}
+	}
+
 	return func(c *gin.Context) {
-		if c.GetHeader("Origin") == origin {
+		origin := c.GetHeader("Origin")
+		if _, ok := allowedOrigins[origin]; ok {
 			c.Header("Access-Control-Allow-Origin", origin)
 			c.Header("Vary", "Origin")
 			c.Header("Access-Control-Allow-Headers", "Authorization, Content-Type")
-			c.Header("Access-Control-Allow-Methods", "GET, POST, OPTIONS")
+			c.Header("Access-Control-Allow-Methods", "GET, POST, PUT, DELETE, OPTIONS")
 		}
 		if c.Request.Method == "OPTIONS" {
 			c.AbortWithStatus(204)

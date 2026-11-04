@@ -7,43 +7,19 @@ import (
 
 	"workout-tracker/backend/internal/models"
 
-	driver "github.com/go-sql-driver/mysql"
-	"gorm.io/driver/mysql"
+	"gorm.io/driver/postgres"
 	"gorm.io/gorm"
 )
 
 func Open() (*gorm.DB, error) {
-	host, err := requiredEnv("DB_HOST")
-	if err != nil {
-		return nil, err
-	}
-	port := envOr("DB_PORT", "3306")
-	user, err := requiredEnv("DB_USER")
-	if err != nil {
-		return nil, err
-	}
-	password, err := requiredEnv("DB_PASSWORD")
-	if err != nil {
-		return nil, err
-	}
-	name, err := requiredEnv("DB_NAME")
+	dsn, err := requiredEnv("DB_URL")
 	if err != nil {
 		return nil, err
 	}
 
-	mysqlConfig := driver.NewConfig()
-	mysqlConfig.User = user
-	mysqlConfig.Passwd = password
-	mysqlConfig.Net = "tcp"
-	mysqlConfig.Addr = host + ":" + port
-	mysqlConfig.DBName = name
-	mysqlConfig.Params = map[string]string{"charset": "utf8mb4"}
-	mysqlConfig.ParseTime = true
-	mysqlConfig.Loc = time.UTC
-	dsn := mysqlConfig.FormatDSN()
-	db, err := gorm.Open(mysql.Open(dsn), &gorm.Config{})
+	db, err := gorm.Open(postgres.Open(dsn), &gorm.Config{})
 	if err != nil {
-		return nil, fmt.Errorf("connect to MySQL: %w", err)
+		return nil, fmt.Errorf("connect to PostgreSQL: %w", err)
 	}
 
 	sqlDB, err := db.DB()

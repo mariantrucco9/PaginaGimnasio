@@ -29,7 +29,7 @@ func main() {
 	}
 
 	router := gin.Default()
-	router.Use(middleware.CORS(envOr("FRONTEND_ORIGIN", "http://localhost:5173")))
+	router.Use(middleware.CORS())
 	router.GET("/health", func(c *gin.Context) {
 		c.JSON(200, gin.H{"status": "ok"})
 	})
